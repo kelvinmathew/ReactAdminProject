@@ -5,7 +5,7 @@ import SideBar from "./SideBar";
 
 export default function Profile() {
   const [profile, setProfile] = useState({
-    fullName: "Kelvin Mathew",
+    fullName: "Kelvin Mathew Philipose",
     email: "kelvin@gmail.com",
     phone: "6238253297",
     role: "Software engineer",
