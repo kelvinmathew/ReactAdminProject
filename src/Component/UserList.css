@@ -1,0 +1,245 @@
+.userlist-container {
+  width: 90%;
+  margin: 10px auto;
+  margin-left: 15px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+.userlist-container h2 {
+  text-align: left;
+  margin-bottom: 20px;
+  color: #222;
+}
+
+/* Buttons container */
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+/* Add User Button */
+.add-user-btn {
+  background-color:  #4f46e5;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.add-user-btn:hover {
+  background-color: #163fc2;
+}
+
+/* Export All Users Button nnnn */
+.export-all-btn {
+  background-color:   #4f46e5;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.export-all-btn:hover {
+  background-color: #4eb141;
+}
+
+/* Add User Form */
+.add-user-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f8f9fa;
+}
+
+.add-user-form input,
+.add-user-form select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  flex: 1 1 150px; /* responsive width */
+}
+
+.add-user-form .save-btn {
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.add-user-form .save-btn:hover {
+  background-color: #163fc2;
+}
+
+/* User Table */
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  table-layout: fixed; /* prevent row expansion */
+}
+
+.user-table th,
+.user-table td {
+  padding: 6px 8px; /* reduced padding to reduce gap */
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  vertical-align: middle; /* align inputs and buttons */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-table th {
+  background-color:  #4f46e5;
+  color: #fff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* Set specific column widths to reduce gaps */
+.user-table th:nth-child(1), 
+.user-table td:nth-child(1) { width: 50px; } /* ID */
+.user-table th:nth-child(2), 
+.user-table td:nth-child(2) { width: 120px; } /* Username */
+.user-table th:nth-child(3), 
+.user-table td:nth-child(3) { width: 180px; } /* Email */
+.user-table th:nth-child(4), 
+.user-table td:nth-child(4) { width: 120px; } /* First Name */
+.user-table th:nth-child(5), 
+.user-table td:nth-child(5) { width: 120px; } /* Last Name */
+.user-table th:nth-child(6), 
+.user-table td:nth-child(6) { width: 120px; } /* Bio */
+.user-table th:nth-child(7), 
+.user-table td:nth-child(7) { width: 100px; } /* Phone */
+.user-table th:nth-child(8), 
+.user-table td:nth-child(8) { width: 80px; } /* Status */
+.user-table th:nth-child(9), 
+.user-table td:nth-child(9) { width: 150px; } /* Actions */
+
+.user-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.user-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+.user-table input[type="text"],
+.user-table input[type="email"],
+.user-table select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+/* Table buttons */
+.user-table button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s ease;
+}
+
+.edit-btn {
+  background-color: #3498db;
+  color: #fff;
+}
+
+.edit-btn:hover {
+  background-color: #2980b9;
+}
+
+.delete-btn {
+  background-color: #e74c3c;
+  color: #fff;
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
+}
+
+.save-btn {
+  background-color: #27ae60;
+  color: #fff;
+}
+
+.save-btn:hover {
+  background-color: #1e8449;
+}
+
+.cancel-btn {
+  background-color: #95a5a6;
+  color: #fff;
+}
+
+.cancel-btn:hover {
+  background-color: #7f8c8d;
+}
+
+/* Inline buttons for edit/save/cancel */
+.inline-btns {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: nowrap; /* keep buttons inline */
+}
+
+/* Pagination */
+.pagination {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.pagination button {
+  margin: 0 3px;
+  padding: 5px 10px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  background-color: white;
+  color: #333;
+}
+
+.pagination button:hover {
+  background-color: #f0f0f0;
+}
+
+.active-page {
+  background-color: #1f48ff;
+  color: white;
+  border: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .button-group {
+    flex-direction: column;
+    gap: 10px;
+  }
+}

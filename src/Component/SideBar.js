@@ -9,8 +9,9 @@ function SideBar() {
   const navItems = [
     { path: "/dashboard", icon: "📊", label: "Dashboard" },
     { path: "/userlist", icon: "👥", label: "User List" },
+    { path: "/activelog", icon: "👥", label: "Activity Log" },
     { path: "/profile", icon: "👤", label: "My Profile" },
-    { path: "/login", icon: "🚪", label: "Log Out" }
+    
   ];
 
   // ✅ Close sidebar when clicking outside
