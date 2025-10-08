@@ -1,6 +1,9 @@
-import React, { useState } from "react";
-import './login.css';
+// src/Component/Login.js
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import "./login.css";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -8,90 +11,61 @@ function Login() {
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
-  // Email validation regex
-  const validateEmail = (email) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
-    return regex.test(email);
-  };
+  // Cleanup old tokens on component mount
+  useEffect(() => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+  }, []);
 
-  // Password validation regex
-  const validatePassword = (password) => {
-    const regex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    return regex.test(password);
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    let validationErrors = {};
+    setErrors({});
 
-    if (!email) {
-      validationErrors.email = "Email is required";
-    } else if (!validateEmail(email)) {
-      validationErrors.email = "Enter a valid email (e.g., user@domain.com)";
+    if (!email || !password) {
+      setErrors({ form: "Email and password are required" });
+      return;
     }
 
-    if (!password) {
-      validationErrors.password = "Password is required";
-    } else if (!validatePassword(password)) {
-      validationErrors.password =
-        "Password must be at least 8 chars, include uppercase, lowercase, number & special character";
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/auth/token/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("access_token", data.access);
+        localStorage.setItem("refresh_token", data.refresh);
+
+        toast.success("🎉 Login successful!", { position: "top-right", autoClose: 3000 });
+
+        setTimeout(() => navigate("/dashboard"), 1000);
+      } else {
+        setErrors({ form: data.detail || "Invalid credentials" });
+      }
+    } catch (err) {
+      setErrors({ form: "Network error, try again later" });
     }
-
-    setErrors(validationErrors);
-
-    // If any validation errors, stop here
-    if (Object.keys(validationErrors).length > 0) return;
-
-    // ✅ Any valid email + password will pass
-    navigate("/dashboard");
   };
 
   return (
     <div className="main">
+      <ToastContainer />
       <div className="login-container">
-        <div className="login-header">
-          <h2>Welcome Back!</h2>
-        </div>
+        <h2>Login</h2>
         <form onSubmit={handleSubmit} className="login-form" noValidate>
-          {/* Email Input */}
+          {errors.form && <p className="error-text">{errors.form}</p>}
           <div className="input-group">
-            <label>Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            {errors.email && <p className="error-text">{errors.email}</p>}
+            <label>Username</label>
+            <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
-
-          {/* Password Input */}
           <div className="input-group">
             <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            {errors.password && <p className="error-text">{errors.password}</p>}
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
-
-          {/* Options */}
-          <div className="options">
-            <div className="remember-me">
-              <input type="checkbox" id="remember-me" />
-            </div>
-            <a href="/forgot" className="forgot-password">
-              
-            </a>
-          </div>
-
-          {/* Submit */}
-          <button type="submit" className="login-button">
-            Login
-          </button>
+          <button type="submit" className="login-button">Login</button>
         </form>
       </div>
     </div>

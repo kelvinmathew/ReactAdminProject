@@ -1,232 +1,383 @@
-// src/Component/UserList.jsx (or .js)
-import React, { useEffect } from "react";
-import 'bootstrap/dist/css/bootstrap.min.css';
-import "./Main.css";
-import SideBar from "./SideBar";
+// src/Component/UserList.js
+import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-
 import {
   fetchUsersAsync,
-  addUserAsync,
+  createUserAsync,
   updateUserAsync,
   deleteUserAsync,
-  setSearchTerm,
-  openAddUser,
-  openViewUser,
-  startEdit,
-  closeModal,
-  changeField,
   selectUsersState,
-  selectFilteredUsers
 } from "./userSlice";
+import "./UserList.css";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-export default function UserList() {
+function UserList() {
   const dispatch = useDispatch();
-  const { searchTerm, viewUserData, isEditMode, loading, error } =
-    useSelector(selectUsersState);
-  const filteredUsers = useSelector(selectFilteredUsers);
+  const { users, loading, error } = useSelector(selectUsersState);
 
-  // Load initial users
+  const [editUserId, setEditUserId] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newUser, setNewUser] = useState({
+    username: "",
+    email: "",
+    first_name: "",
+    last_name: "",
+    profile: { bio: "", phone: "" },
+    is_active: true,
+  });
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 5;
+
+  // -------------------
+  // Authenticated fetch helper (use latest access_token)
+  // -------------------
+  const authFetch = useCallback(async (url, options = {}) => {
+    const token = localStorage.getItem("access_token");
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    };
+    return axios({ url, ...options, headers });
+  }, []);
+
+  // -------------------
+  // Fetch users on mount
+  // -------------------
   useEffect(() => {
     dispatch(fetchUsersAsync());
   }, [dispatch]);
 
-  // Handlers (now dispatching Redux actions)
-  const handleViewUser = (id) => dispatch(openViewUser(id));
-  const handleAddUser = () => dispatch(openAddUser());
-  const handleDeleteUser = (id) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      dispatch(deleteUserAsync(id));
+  // Handle input changes
+  const handleChange = (key, value, isEdit = false) => {
+    if (key === "bio" || key === "phone") {
+      isEdit
+        ? setEditData({ ...editData, profile: { ...editData.profile, [key]: value } })
+        : setNewUser({ ...newUser, profile: { ...newUser.profile, [key]: value } });
+    } else if (key === "is_active") {
+      isEdit
+        ? setEditData({ ...editData, [key]: value })
+        : setNewUser({ ...newUser, [key]: value });
+    } else {
+      isEdit
+        ? setEditData({ ...editData, [key]: value })
+        : setNewUser({ ...newUser, [key]: value });
     }
   };
 
-  const handleSave = () => {
-    if (!viewUserData) return;
-    if (viewUserData.id) {
-      dispatch(updateUserAsync(viewUserData)).then(() => dispatch(closeModal()));
-    } else {
-      dispatch(addUserAsync(viewUserData)).then(() => dispatch(closeModal()));
+  // Save edited user
+  const handleSave = async () => {
+    if (!editUserId) return;
+    try {
+      await dispatch(updateUserAsync(editData)).unwrap();
+      await dispatch(fetchUsersAsync());
+      setEditUserId(null);
+      toast.success("User updated successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error(`Update failed: ${err?.detail || JSON.stringify(err)}`);
     }
   };
+
+  // Add new user
+  const handleAddUser = async () => {
+    try {
+      await dispatch(createUserAsync(newUser)).unwrap();
+      await dispatch(fetchUsersAsync());
+      setShowAddForm(false);
+      setNewUser({
+        username: "",
+        email: "",
+        first_name: "",
+        last_name: "",
+        profile: { bio: "", phone: "" },
+        is_active: true,
+      });
+      setCurrentPage(1);
+      toast.success("User created successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error(`Create failed: ${err?.detail || JSON.stringify(err)}`);
+    }
+  };
+
+  // Delete user
+  const handleDelete = async (id) => {
+    if (!id) return;
+    try {
+      await dispatch(deleteUserAsync(id)).unwrap();
+      await dispatch(fetchUsersAsync());
+      toast.success("User deleted successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error(`Delete failed: ${err?.detail || JSON.stringify(err)}`);
+    }
+  };
+
+  // Export all users
+  const handleExportAll = async () => {
+    try {
+      const response = await authFetch("http://localhost:8000/api/export-users/", {
+        method: "GET",
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "All_Users_Report.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Users exported successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error downloading file: " + (err.response?.statusText || err.message));
+    }
+  };
+
+  // Sort users by newest first
+  const sortedUsers = [...users].sort((a, b) => b.id - a.id);
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedUsers.length / usersPerPage);
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = sortedUsers.slice(indexOfFirstUser, indexOfLastUser);
+
+  if (loading) return <p>Loading users...</p>;
+  if (error)
+    return (
+      <p style={{ color: "red" }}>
+        Error: {typeof error === "string" ? error : error.detail || JSON.stringify(error)}
+      </p>
+    );
 
   return (
-    <div className="hee">
-      <SideBar />
+    <div className="userlist-container">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+      <h2>User Management</h2>
 
-      <div id="userlist" className="page active">
-        <div className="page-header">
-          <h1 className="pages-titles">User Management</h1>
-          <p className="pages-subtitles">Manage all registered users</p>
-        </div>
+      {/* Buttons */}
+      <div className="button-group">
+        <button className="add-user-btn" onClick={() => setShowAddForm((prev) => !prev)}>
+          {showAddForm ? "Cancel" : "Add User"}
+        </button>
+        <button className="export-all-btn" onClick={handleExportAll}>
+          Export All Users
+        </button>
+      </div>
 
-        <div className="user-actions">
-          <button className="btn btn-primary" onClick={handleAddUser}>
-            Add User
-          </button>
+      {/* Add User Form */}
+      {showAddForm && (
+        <div className="add-user-form">
           <input
-            type="text"
-            className="search-box"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => dispatch(setSearchTerm(e.target.value))}
+            placeholder="Username"
+            value={newUser.username}
+            onChange={(e) => handleChange("username", e.target.value)}
           />
+          <input
+            placeholder="Email"
+            value={newUser.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+          />
+          <input
+            placeholder="First Name"
+            value={newUser.first_name}
+            onChange={(e) => handleChange("first_name", e.target.value)}
+          />
+          <input
+            placeholder="Last Name"
+            value={newUser.last_name}
+            onChange={(e) => handleChange("last_name", e.target.value)}
+          />
+          <input
+            placeholder="Bio"
+            value={newUser.profile.bio}
+            onChange={(e) => handleChange("bio", e.target.value)}
+          />
+          <input
+            placeholder="Phone"
+            value={newUser.profile.phone}
+            onChange={(e) => handleChange("phone", e.target.value)}
+          />
+          <select
+            value={newUser.is_active ? "Active" : "Inactive"}
+            onChange={(e) => handleChange("is_active", e.target.value === "Active")}
+          >
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+          <button className="save-btn" onClick={handleAddUser}>
+            Save
+          </button>
         </div>
+      )}
 
-        {loading && <p className="text-muted">Loading users…</p>}
-        {error && <p className="text-danger">Error: {error}</p>}
-
-        <div className="user-table">
-          <table id="userTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Join Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user, index) => (
-                <tr key={user.id}>
-                  <td>{index + 1}</td>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td>{user.role}</td>
-                  <td>
-                    <span
-                      className={`status-badge ${
-                        user.status === "Active" ? "status-active" : "status-inactive"
-                      }`}
-                    >
-                      {user.status}
-                    </span>
-                  </td>
-                  <td>{user.joinDate}</td>
-                  <td>
-                    <div className="action-buttons">
-                      <button
-                        className="btn btn-info btn-sm"
-                        onClick={() => handleViewUser(user.id)}
-                      >
-                        View
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleDeleteUser(user.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!loading && filteredUsers.length === 0 && (
-                <tr>
-                  <td colSpan="7" className="text-center text-muted">
-                    No users found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* View / Edit / Add Modal (Redux-driven) */}
-        {viewUserData && (
-          <div className="modal" style={{ display: "block" }}>
-            <div className="modal-content">
-              <span className="close" onClick={() => dispatch(closeModal())}>
-                &times;
-              </span>
-
-              <h2>
-                {viewUserData.id
-                  ? isEditMode
-                    ? "Edit User"
-                    : "View User"
-                  : "Add User"}
-              </h2>
-
-              {isEditMode ? (
-                <>
-                  <div className="form-group">
-                    <label>Name</label>
+      {/* User Table */}
+      <table className="user-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Bio</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {currentUsers.length > 0 ? (
+            currentUsers.map((u) => (
+              <tr key={u.id}>
+                <td>{u.id}</td>
+                <td>
+                  {editUserId === u.id ? (
                     <input
-                      className="form-control"
-                      value={viewUserData.name}
-                      onChange={(e) =>
-                        dispatch(changeField({ key: "name", value: e.target.value }))
-                      }
+                      type="text"
+                      value={editData.username || ""}
+                      onChange={(e) => handleChange("username", e.target.value, true)}
                     />
-                  </div>
-                  <div className="form-group">
-                    <label>Email</label>
+                  ) : (
+                    u.username
+                  )}
+                </td>
+                <td>
+                  {editUserId === u.id ? (
                     <input
-                      className="form-control"
-                      value={viewUserData.email}
-                      onChange={(e) =>
-                        dispatch(changeField({ key: "email", value: e.target.value }))
-                      }
+                      type="text"
+                      value={editData.email || ""}
+                      onChange={(e) => handleChange("email", e.target.value, true)}
                     />
-                  </div>
-                  <div className="form-group">
-                    <label>Role</label>
+                  ) : (
+                    u.email
+                  )}
+                </td>
+                <td>
+                  {editUserId === u.id ? (
                     <input
-                      className="form-control"
-                      value={viewUserData.role}
-                      onChange={(e) =>
-                        dispatch(changeField({ key: "role", value: e.target.value }))
-                      }
+                      type="text"
+                      value={editData.first_name || ""}
+                      onChange={(e) => handleChange("first_name", e.target.value, true)}
                     />
-                  </div>
-                  <div className="form-group">
-                    <label>Status</label>
+                  ) : (
+                    u.first_name
+                  )}
+                </td>
+                <td>
+                  {editUserId === u.id ? (
+                    <input
+                      type="text"
+                      value={editData.last_name || ""}
+                      onChange={(e) => handleChange("last_name", e.target.value, true)}
+                    />
+                  ) : (
+                    u.last_name
+                  )}
+                </td>
+                <td>
+                  {editUserId === u.id ? (
+                    <input
+                      type="text"
+                      value={editData.profile?.bio || ""}
+                      onChange={(e) => handleChange("bio", e.target.value, true)}
+                    />
+                  ) : (
+                    u.profile?.bio || ""
+                  )}
+                </td>
+                <td>
+                  {editUserId === u.id ? (
+                    <input
+                      type="text"
+                      value={editData.profile?.phone || ""}
+                      onChange={(e) => handleChange("phone", e.target.value, true)}
+                    />
+                  ) : (
+                    u.profile?.phone || ""
+                  )}
+                </td>
+                <td>
+                  {editUserId === u.id ? (
                     <select
-                      className="form-control"
-                      value={viewUserData.status}
+                      value={editData.is_active ? "Active" : "Inactive"}
                       onChange={(e) =>
-                        dispatch(changeField({ key: "status", value: e.target.value }))
+                        handleChange("is_active", e.target.value === "Active", true)
                       }
                     >
                       <option>Active</option>
                       <option>Inactive</option>
                     </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Join Date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={viewUserData.joinDate}
-                      onChange={(e) =>
-                        dispatch(changeField({ key: "joinDate", value: e.target.value }))
-                      }
-                    />
-                  </div>
+                  ) : u.is_active ? (
+                    "Active"
+                  ) : (
+                    "Inactive"
+                  )}
+                </td>
+                <td>
+                  {editUserId === u.id ? (
+                    <div className="inline-btns">
+                      <button className="save-btn" onClick={handleSave}>
+                        Save
+                      </button>
+                      <button className="cancel-btn" onClick={() => setEditUserId(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="inline-btns">
+                      <button
+                        className="edit-btn"
+                        onClick={() => {
+                          setEditUserId(u.id);
+                          setEditData({ ...u });
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button className="delete-btn" onClick={() => handleDelete(u.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="9" style={{ textAlign: "center" }}>
+                No users found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
 
-                  <button className="btn btn-primary" onClick={handleSave}>
-                    {viewUserData.id ? "Save Changes" : "Add User"}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p><strong>Name:</strong> {viewUserData.name}</p>
-                  <p><strong>Email:</strong> {viewUserData.email}</p>
-                  <p><strong>Role:</strong> {viewUserData.role}</p>
-                  <p><strong>Status:</strong> {viewUserData.status}</p>
-                  <p><strong>Join Date:</strong> {viewUserData.joinDate}</p>
-                  <button className="btn btn-warning" onClick={() => dispatch(startEdit())}>
-                    Edit
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="pagination">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i + 1}
+              className={currentPage === i + 1 ? "active-page" : ""}
+              onClick={() => setCurrentPage(i + 1)}
+            >
+              {i + 1}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+export default UserList;
